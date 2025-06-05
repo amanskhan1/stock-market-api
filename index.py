@@ -1280,35 +1280,68 @@ def fetch_stock_data(stock_symbols, period):
 #         return pd.DataFrame()  # Return empty DataFrame on error
 
 
-@app.get('/store-stock-data/{period}')
-def store_stock_data(period):
-    """
-    Endpoint to store stock data in Redis for a specified period.
+# @app.get('/store-stock-data/{period}')
+# def store_stock_data(period):
+#     """
+#     Endpoint to store stock data in Redis for a specified period.
     
-    Parameters:
-        period (str): The period to fetch stock data for.
+#     Parameters:
+#         period (str): The period to fetch stock data for.
     
-    Returns:
-        dict: Response indicating success or error.
-    """
-    try: 
-        nifty_data = capital_market.equity_list()  # Fetch list of stocks
+#     Returns:
+#         dict: Response indicating success or error.
+#     """
+#     try: 
+#         nifty_data = capital_market.equity_list()  # Fetch list of stocks
         
-        if isinstance(nifty_data, pd.DataFrame):
-            nifty_data_clean = nifty_data.replace([np.nan, np.inf, -np.inf], None)
+#         if isinstance(nifty_data, pd.DataFrame):
+#             nifty_data_clean = nifty_data.replace([np.nan, np.inf, -np.inf], None)
 
-            if ' SERIES' in nifty_data_clean.columns:
-                stocks = nifty_data_clean[nifty_data_clean[' SERIES'] == 'EQ']['SYMBOL'].tolist()
+#             if ' SERIES' in nifty_data_clean.columns:
+#                 stocks = nifty_data_clean[nifty_data_clean[' SERIES'] == 'EQ']['SYMBOL'].tolist()
                 
-            # Call fetch_stock_data with the list of stock symbols
-            fetch_stock_data(stocks, period)
+#             # Call fetch_stock_data with the list of stock symbols
+#             fetch_stock_data(stocks, period)
 
-        return {"message": "Stock data stored successfully."}
+#         return {"message": "Stock data stored successfully."}
+
+#     except Exception as e:
+#         logging.error(f"Error in storing stock data: {e}")
+#         return {"error": str(e)}
+
+def get_equity_list_from_cache():
+    cache_key = "equity_list_cache"
+    cached = redis_client.get(cache_key)
+    if not cached:
+        raise ValueError("equity_list_cache not found in Redis.")
+
+    try:
+        data = json.loads(cached)
+        df = pd.DataFrame(data)
+        return df
+    except Exception as e:
+        raise ValueError(f"Error parsing cached equity list: {e}")
+
+@app.get("/store-stock-data/{period}")
+def store_stock_data(period: str):
+    try:
+        equity_df = get_equity_list_from_cache()
+        equity_df.replace([np.nan, np.inf, -np.inf], None, inplace=True)
+
+        if " SERIES" not in equity_df.columns or "SYMBOL" not in equity_df.columns:
+            return {"error": "Invalid data format in equity_list_cache"}
+
+        stocks = equity_df[equity_df[" SERIES"] == "EQ"]["SYMBOL"].tolist()
+
+        if not stocks:
+            return {"error": "No EQ stocks found"}
+
+        fetch_stock_data(stocks, period)
+        return {"message": f"Stock data for {len(stocks)} symbols stored successfully."}
 
     except Exception as e:
-        logging.error(f"Error in storing stock data: {e}")
+        logging.error(f"Error in store_stock_data: {e}")
         return {"error": str(e)}
-
 
 @app.get("/fii-dii-activity")
 def get_fii_dii_activity():
