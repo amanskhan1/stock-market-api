@@ -17,13 +17,23 @@ def sync_equity_data():
     cache_key = "equity_list_cache"
 
     try:
-        url = "https://www1.nseindia.com/content/equities/EQUITY_L.csv"
-        headers = {
-            "User-Agent": "Mozilla/5.0",
-            "Referer": "https://www.nseindia.com"
-        }
+        url = "https://www.nseindia.com/api/master-quote-equity?csv=true"  # Alt API (less likely to block)
+        alt_url = "https://archives.nseindia.com/content/equities/EQUITY_L.csv"  # Main CSV (403 fixable)
 
-        response = requests.get(url, headers=headers, timeout=10)
+        session = requests.Session()
+        session.headers.update({
+            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64)",
+            "Accept-Language": "en-US,en;q=0.9",
+            "Accept-Encoding": "gzip, deflate, br",
+            "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8",
+            "Referer": "https://www.nseindia.com/"
+        })
+
+        # First request to get cookies (simulate browser visit)
+        session.get("https://www.nseindia.com", timeout=10)
+
+        # Then fetch the CSV
+        response = session.get(alt_url, timeout=10)
         response.encoding = "utf-8"
 
         if response.status_code == 200:
