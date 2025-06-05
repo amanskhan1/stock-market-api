@@ -4,7 +4,7 @@ import json
 import pandas as pd
 import requests
 from dotenv import load_dotenv
-from io import StringIO
+import io
 
 load_dotenv()
 
@@ -17,32 +17,29 @@ def sync_equity_data():
     cache_key = "equity_list_cache"
 
     try:
-        url = "https://www.nseindia.com/api/master-quote-equity?csv=true"  # Alt API (less likely to block)
-        alt_url = "https://archives.nseindia.com/content/equities/EQUITY_L.csv"  # Main CSV (403 fixable)
-
-        session = requests.Session()
-        session.headers.update({
-            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64)",
+        nse_url = "https://nsearchives.nseindia.com/content/equities/EQUITY_L.csv"
+        headers = {
+            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/113.0.0.0 Safari/537.36",
             "Accept-Language": "en-US,en;q=0.9",
-            "Accept-Encoding": "gzip, deflate, br",
-            "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8",
             "Referer": "https://www.nseindia.com/"
-        })
+        }
 
-        # First request to get cookies (simulate browser visit)
-        session.get("https://www.nseindia.com", timeout=10)
+        with requests.Session() as session:
+            session.headers.update(headers)
 
-        # Then fetch the CSV
-        response = session.get(alt_url, timeout=10)
-        response.encoding = "utf-8"
+            # Hit homepage to establish cookies
+            session.get("https://www.nseindia.com", timeout=10)
 
-        if response.status_code == 200:
-            df = pd.read_csv(StringIO(response.text), on_bad_lines='skip')
-            data = df.to_dict(orient="records")
-            redis_client.setex(cache_key, 86400, json.dumps(data))
-            print("✅ Equity data synced to Redis.")
-        else:
-            print(f"❌ Failed to fetch: {response.status_code}")
+            # Fetch CSV file
+            response = session.get(nse_url, timeout=10)
+            if response.status_code == 200:
+                df = pd.read_csv(io.BytesIO(response.content), on_bad_lines='skip')
+                data = df.to_dict(orient="records")
+                redis_client.setex(cache_key, 86400, json.dumps(data))  # TTL 1 day
+                print("✅ Equity data synced to Redis.")
+            else:
+                print(f"❌ Failed to fetch NSE data. Status code: {response.status_code}")
+
     except Exception as e:
         print(f"❌ Error syncing data: {e}")
 
