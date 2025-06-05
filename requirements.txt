@@ -8,6 +8,7 @@ charset-normalizer==3.3.2
 click==8.1.7
 curl_cffi==0.11.1
 dateutils==0.6.12
+dotenv==0.9.9
 exchange_calendars==4.10.1
 fastapi==0.115.0
 frozendict==2.4.4
@@ -25,6 +26,7 @@ ml_dtypes==0.5.0
 multitasking==0.0.11
 namex==0.0.8
 nselib==1.9
+nsepython==2.97
 nsetools==1.0.11
 numpy==2.1.1
 optree==0.12.1
@@ -40,6 +42,7 @@ pydantic_core==2.23.4
 Pygments==2.18.0
 pyluach==2.2.0
 python-dateutil==2.9.0.post0
+python-dotenv==1.1.0
 pytz==2024.2
 redis==5.1.0
 requests==2.32.3
