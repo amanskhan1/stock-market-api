@@ -9,7 +9,7 @@ from io import StringIO
 load_dotenv()
 
 def sync_equity_data():
-    redis_url = os.getenv("rediss://default:AZPlAAIjcDFkYzhiOTZkNzJkMWY0MDk4YmJjOGE1ZTgzZTUyMTE0MHAxMA@master-doberman-37861.upstash.io:6379")
+    redis_url = "rediss://default:AZPlAAIjcDFkYzhiOTZkNzJkMWY0MDk4YmJjOGE1ZTgzZTUyMTE0MHAxMA@master-doberman-37861.upstash.io:6379"
     if not redis_url:
         raise ValueError("REDIS_URL is not set.")
 
