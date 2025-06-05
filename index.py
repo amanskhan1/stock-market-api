@@ -15,27 +15,46 @@ import os
 import json
 import time
 import traceback
+from dotenv import load_dotenv
+load_dotenv()
+
 
 logging.basicConfig(level=logging.INFO)
 
-redis_client = redis.Redis(host='localhost', port=6379, db=0)
+redis_client = redis.from_url(
+    os.getenv("REDIS_URL"),
+    decode_responses=True
+)
+
+CACHE_KEY = "equity_list_cache"
+CACHE_TTL = 86400  # 1 day in seconds
 
 # Now use this session to access NSE data
 app = FastAPI()
 
 @app.get("/equity-list")
-def get_nse_data():
-    # Fetch data from NSE, for example: nifty index data
+def get_equity_list():
+    # 1. Try Redis cache
+    cached_data = redis_client.get(CACHE_KEY)
+    if cached_data:
+        return JSONResponse(content=eval(cached_data), status_code=200)
+
+    # 2. Fetch fresh data from NSE
     try:
-        nifty_data = capital_market.equity_list()  # Or any other method from nselib
-        if isinstance(nifty_data, pd.DataFrame):
-            # Convert DataFrame to dictionary
-            nifty_data_dict = nifty_data.to_dict(orient="records")  # You can use other orientations
-            return JSONResponse(content=nifty_data_dict, status_code=200)
+        df = capital_market.equity_list()
+        if isinstance(df, pd.DataFrame):
+            result = df.to_dict(orient="records")
+
+            # 3. Store in Redis
+            redis_client.setex(CACHE_KEY, CACHE_TTL, str(result))  # TTL set to 1 day
+
+            return JSONResponse(content=result, status_code=200)
         else:
             return JSONResponse(content={"error": "Unexpected data format"}, status_code=500)
     except Exception as e:
         return JSONResponse(content={"error": str(e)}, status_code=500)
+    
+
 
 @app.get("/equity/{sym}")
 def get_equity_info(sym):
