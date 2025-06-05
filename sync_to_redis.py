@@ -7,7 +7,7 @@ from dotenv import load_dotenv
 load_dotenv()  # loads REDIS_URL from .env or GitHub secret
 
 def sync_equity_data():
-    redis_url = os.getenv("REDIS_URL")
+    redis_url = "rediss://default:AZPlAAIjcDFkYzhiOTZkNzJkMWY0MDk4YmJjOGE1ZTgzZTUyMTE0MHAxMA@master-doberman-37861.upstash.io:6379"
     if not redis_url:
         raise ValueError("REDIS_URL is not set.")
 
