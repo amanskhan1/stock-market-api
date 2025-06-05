@@ -14,7 +14,8 @@ def sync_equity_data():
     redis_client = redis.from_url(redis_url, decode_responses=True)
     cache_key = "equity_list_cache"
     try:
-        df = capital_market.equity_list()
+        # df = capital_market.equity_list()
+        df = pd.DataFrame([{"symbol": "RELIANCE"}, {"symbol": "TCS"}, {"symbol": "INFY"}])
         if isinstance(df, pd.DataFrame):
             data = df.to_dict(orient="records")
             redis_client.setex(cache_key, 86400, str(data))  # TTL 1 day
